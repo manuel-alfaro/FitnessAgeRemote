@@ -1,1 +1,1052 @@
-s
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React App i HTML</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            keyframes: {
+              'fade-in': {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            },
+            animation: {
+              'fade-in': 'fade-in 0.5s ease-out forwards',
+            }
+          }
+        }
+      }
+    </script>
+    
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      /* Grunnleggende bakgrunnsfarge */
+      body { background-color: #0a0c0e; }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+// ---------- REACOG FIREBASE IMPORTER (fra globale variabler) ----------
+const { useState, useEffect, useCallback, useMemo } = React;
+// Hent Firebase-funksjoner fra globalt skop
+const { initializeApp } = window.firebase.app;
+const { getDatabase, ref, set, onValue } = window.firebase.database;
+
+
+// ---------- IKONER (SVG) ----------
+const IconArrowLeft = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+);
+const IconUser = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+);
+const IconExclamationCircle = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+);
+const IconHourglass = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
+);
+const IconUsers = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+);
+const IconPlay = ({size = 16, ...props}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M5 3l14 9-14 9V3z"/></svg>
+);
+const IconFileText = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+);
+const IconGrid = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+);
+const IconBarChart = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+);
+const IconCheck = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="20 6 9 17 4 12"/></svg>
+);
+const IconRestart = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4"/>
+    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>
+  </svg>
+);
+const IconMonitor = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+);
+const IconChevronRight = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 18 15 12 9 6"/></svg>
+);
+
+// ---------- FIREBASE KONFIGURASJON ----------
+const firebaseConfig = {
+    apiKey: "AIzaSyDFu-aEtJ17AxIk3B5AjB-BSZ1u0-hY9y4",
+    authDomain: "prototypefitnessage.firebaseapp.com",
+    projectId: "prototypefitnessage",
+    storageBucket: "prototypefitnessage.firebasestorage.app",
+    messagingSenderId: "203645458759",
+    appId: "1:203645458759:web:6c19ba329bbbafdd745462",
+    databaseURL: "https://prototypefitnessage-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
+// Initialiser Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// ---------- Utils & Config ----------
+const cx = (...c) => c.filter((x) => typeof x === "string" && x.length > 0).join(" ");
+
+// Funksjon for å sende kommandoer til display-appen
+const sendFirebaseCommand = (command) => {
+    const commandRef = ref(database, 'sideStyring/kommando');
+    set(commandRef, command)
+        .catch((error) => console.error("Firebase command error:", error));
+};
+
+// Funksjon for å sende rapportdata
+const sendFirebaseReport = (data) => {
+    const reportRef = ref(database, 'sideStyring/reportData');
+    return set(reportRef, data); // Returnerer et promise
+};
+
+// ---------- DATA: Protokoller, Bilder, Resultater ----------
+const ALL_PROTOCOLS = [
+    { label: "VitalAge Scan", duration: "~7 min", targetGroup: "Everyone", action: "start_vitalage" },
+    { label: "Senior Fitness Test", duration: "~10 min", targetGroup: "Seniors", action: "show_notification" },
+    { label: "Return to Sport", duration: "~15 min", targetGroup: "Athletes", action: "show_notification" },
+    { label: "Shoulder Screening", duration: "~8 min", targetGroup: "Athletes", action: "show_notification" },
+];
+const BG_IMAGES = [
+    "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=60", // VitalAge Scan
+    "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=60", // Senior Fitness Test
+    "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=800&q=60", // Return to Sport
+    "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&w=800&q=60", // Shoulder Screening
+];
+const MOCK_RESULTS = [
+    { testName: 'VitalAge Scan', type: 'vitalAge', value: 34, change: -2, date: 'Sep 22, 2025' },
+    { testName: 'Return to Sport', type: 'recovery', value: 85, change: 5, date: 'Sep 20, 2025' },
+];
+
+// ---------- DATA: Kalkulasjoner og Modeller (fra HTML-fil) ----------
+
+// --- JUMP DATA ---
+const JUMP_DATA_MENN = [
+    { age: 8.5,  label:"8–9",   p5:17.0, p25:20.6, p50:23.8, p75:27.4, p95:32.5 },
+    { age: 10.5, label:"10–11", p5:18.8, p25:23.4, p50:27.2, p75:31.4, p95:35.9 },
+    { age: 12.5, label:"12–13", p5:20.8, p25:26.6, p50:30.7, p75:35.4, p95:43.6 },
+    { age: 14.5, label:"14–15", p5:22.4, p25:29.6, p50:34.1, p75:38.8, p95:46.0 },
+    { age: 16.5, label:"16–17", p5:22.8, p25:31.6, p50:37.3, p75:42.1, p95:50.4 },
+    { age: 18.5, label:"18–19", p5:25.2, p25:33.0, p50:38.6, p75:44.2, p95:52.2 },
+    { age: 22,   label:"20–24", p5:23.8, p25:31.8, p50:37.4, p75:43.0, p95:51.2 },
+    { age: 27,   label:"25–29", p5:22.5, p25:30.2, p50:35.4, p75:40.6, p95:48.1 },
+    { age: 32,   label:"30–34", p5:26.2, p25:33.2, p50:38.0, p75:42.6, p95:49.8 },
+    { age: 37,   label:"35–39", p5:24.8, p25:31.0, p50:35.6, p75:39.9, p95:46.4 },
+    { age: 42,   label:"40–44", p5:23.6, p25:29.2, p50:33.1, p75:37.1, p95:43.2 },
+    { age: 47,   label:"45–49", p5:18.1, p25:27.3, p50:30.8, p75:34.9, p95:40.6 },
+    { age: 54.5, label:"50–59", p5:15.8, p25:19.2, p50:22.7, p75:25.8, p95:31.7 },
+    { age: 64.5, label:"60–69", p5:14.7, p25:17.6, p50:20.15,p75:22.9, p95:28.2 },
+    { age: 75,   label:"70–80", p5:5.0,  p25:15.9, p50:17.7, p75:21.0, p95:25.6 }
+];
+const JUMP_DATA_KVINNER = [
+    { age: 8.5,  label:"8–9",   p5:16.0, p25:19.8, p50:22.4, p75:25.3, p95:29.4 },
+    { age: 10.5, label:"10–11", p5:18.5, p25:22.2, p50:25.8, p75:28.9, p95:33.2 },
+    { age: 12.5, label:"12–13", p5:18.8, p25:23.4, p50:26.6, p75:30.0, p95:35.0 },
+    { age: 14.5, label:"14–15", p5:18.5, p25:23.5, p50:26.6, p75:29.9, p95:34.6 },
+    { age: 16.5, label:"16–17", p5:18.0, p25:22.4, p50:25.8, p75:29.2, p95:34.3 },
+    { age: 18.5, label:"18–19", p5:17.9, p25:22.2, p50:25.3, p75:28.6, p95:33.4 },
+    { age: 22,   label:"20–24", p5:17.0, p25:21.0, p50:24.4, p75:27.8, p95:32.5 },
+    { age: 27,   label:"25–29", p5:16.2, p25:20.0, p50:23.2, p75:26.4, p95:31.4 },
+    { age: 32,   label:"30–34", p5:20.6, p25:24.2, p50:27.2, p75:30.2, p95:35.0 },
+    { age: 37,   label:"35–39", p5:20.0, p25:23.4, p50:26.2, p75:29.2, p95:33.8 },
+    { age: 42,   label:"40–44", p5:15.0, p25:22.5, p50:25.0, p75:27.9, p95:32.6 },
+    { age: 47,   label:"45–49", p5:14.5, p25:21.8, p50:24.4, p75:26.9, p95:31.2 },
+    { age: 54.5, label:"50–59", p5:14.0, p25:17.0, p50:20.5, p75:24.0, p95:28.0 },
+    { age: 64.5, label:"60–69", p5:13.0, p25:15.5, p50:18.0, p75:21.0, p95:25.0 },
+    { age: 75,   label:"70–80", p5:5.0,  p25:13.5, p50:15.5, p75:18.5, p95:22.0 }
+];
+
+// --- STRENGTH DATA ---
+const STRENGTH_MODEL = {
+  male: { slope: 0.9607, intercept: 0.9399 },
+  female: { slope: 0.7710, intercept: 1.4416 },
+  ageGroupAdjustments: {
+    "Under 10_m": { mean: 0.9098, stdDev: 0.1822 }, "10-19_m": { mean: 1.0061, stdDev: 0.1676 },
+    "20-29_m": { mean: 1.0554, stdDev: 0.1545 }, "30-39_m": { mean: 1.0463, stdDev: 0.1411 },
+    "40-49_m": { mean: 1.0234, stdDev: 0.1382 }, "50-59_m": { mean: 0.9800, stdDev: 0.1626 },
+    "60-69_m": { mean: 0.8587, stdDev: 0.1127 }, "70-79_m": { mean: 0.7195, stdDev: 0.1766 },
+    "80+_m": { mean: 0.69, stdDev: 0.17 },
+    "Under 10_f": { mean: 0.8631, stdDev: 0.1100 }, "10-19_f": { mean: 1.0489, stdDev: 0.1200 },
+    "20-29_f": { mean: 1.1283, stdDev: 0.1625 }, "30-39_f": { mean: 1.1265, stdDev: 0.1728 },
+    "40-49_f": { mean: 1.1329, stdDev: 0.2453 }, "50-59_f": { mean: 1.0346, stdDev: 0.1595 },
+    "60-69_f": { mean: 0.8233, stdDev: 0.1264 }, "70-79_f": { mean: 0.6725, stdDev: 0.1072 },
+    "80+_f": { mean: 0.7410, stdDev: 0.1461 }
+  },
+  overall: { mean: 1.0168, stdDev: 0.1808 }
+};
+
+// --- KALKULASJONSFUNKSJONER (fra HTML) ---
+
+function calculateBalanceAge(realAge, sex, copArea) {
+    const area = parseFloat(copArea);
+    // FIKS: Returner robust objekt selv om data mangler
+    if (!isFinite(area) || area <= 0 || !isFinite(realAge) || realAge <= 0) {
+        const age = realAge > 0 ? realAge + 5 : 40; // Straffe-alder
+        return { age: age, change: 5, text: "Data mangler" };
+    }
+    
+    let balanceAge;
+    if (realAge <= 35) {
+        const minArea = 3.13;
+        const clippedArea = Math.max(minArea, area);
+        const kvinneBaseAlder = 21 - (2.36 * minArea);
+        const mannBaseAlder = 21 - (2.41 * minArea);
+        if (sex.toLowerCase() === "kvinne") {
+            balanceAge = kvinneBaseAlder + 2.36 * clippedArea;
+        } else {
+            balanceAge = mannBaseAlder + 2.41 * clippedArea;
+        }
+    } else {
+        const minArea = 3.0;
+        const clippedArea = Math.max(minArea, area);
+        if (sex.toLowerCase() === "kvinne") {
+            balanceAge = 26.11 + 2.36 * clippedArea;
+        } else {
+            balanceAge = 25.47 + 2.41 * clippedArea;
+        }
+    }
+    const finalAge = Math.min(balanceAge, realAge + 5);
+    const change = finalAge - realAge;
+    const text = `${Math.abs(change).toFixed(0)} år ${change > 0 ? 'eldre' : 'yngre'} enn forventet`;
+    return { age: finalAge, change: change, text: text };
+}
+
+function getAgeGroupData(age, sex) {
+    const dataSet = sex.toLowerCase() === 'kvinne' ? JUMP_DATA_KVINNER : JUMP_DATA_MENN;
+    if (age <= 9) return dataSet[0];
+    if (age <= 11) return dataSet[1];
+    if (age <= 13) return dataSet[2];
+    if (age <= 15) return dataSet[3];
+    if (age <= 17) return dataSet[4];
+    if (age <= 19) return dataSet[5];
+    if (age <= 24) return dataSet[6];
+    if (age <= 29) return dataSet[7];
+    if (age <= 34) return dataSet[8];
+    if (age <= 39) return dataSet[9];
+    if (age <= 44) return dataSet[10];
+    if (age <= 49) return dataSet[11];
+    if (age <= 59) return dataSet[12];
+    if (age <= 69) return dataSet[13];
+    return dataSet[14];
+}
+
+function calculateJumpPercentile(age, sex, jumpHeight) {
+    if (!isFinite(jumpHeight) || !isFinite(age) || jumpHeight <= 0) return NaN; // FIKS
+    const g = getAgeGroupData(age, sex);
+    const pts = [ {p:5, x:g.p5}, {p:25, x:g.p25}, {p:50, x:g.p50}, {p:75, x:g.p75}, {p:95, x:g.p95} ];
+    
+    if (jumpHeight <= pts[0].x) {
+        const m = (pts[1].p - pts[0].p) / (pts[1].x - pts[0].x || 1e-6);
+        return Math.max(0, pts[0].p + (jumpHeight - pts[0].x) * m);
+    }
+    for (let i = 0; i < pts.length - 1; i++) {
+        if (jumpHeight <= pts[i+1].x) {
+            const m = (pts[i+1].p - pts[i].p) / (pts[i+1].x - pts[i].x || 1e-6);
+            return pts[i].p + (jumpHeight - pts[i].x) * m;
+        }
+    }
+    const m = (pts[pts.length-1].p - pts[pts.length-2].p) / (pts[pts.length-1].x - pts[pts.length-2].x || 1e-6);
+    return Math.min(100, pts[pts.length-1].p + (jumpHeight - pts[pts.length-1].x) * m);
+}
+
+function getStrengthAgeGroup(age) {
+    if (age < 10) return 'Under 10'; if (age < 20) return '10-19';
+    if (age < 30) return '20-29'; if (age < 40) return '30-39';
+    if (age < 50) return '40-49'; if (age < 60) return '50-59';
+    if (age < 70) return '60-69'; if (age < 80) return '70-79';
+    return '80+';
+}
+
+function calculateStrengthScoreAndPercentile(gender, age, weight, pull) {
+    if (!isFinite(age) || !isFinite(weight) || !isFinite(pull) || weight <= 0 || pull <= 0) { // FIKS
+        return { score: NaN, percentile: NaN };
+    }
+    try {
+        const genderKey = gender.toLowerCase() === 'kvinne' ? 'female' : 'male';
+        const model = STRENGTH_MODEL[genderKey];
+        const expectedLogPull = model.intercept + model.slope * Math.log(weight);
+        const expectedPull = Math.exp(expectedLogPull);
+        if (!isFinite(expectedPull) || expectedPull <= 0) {
+            return { score: NaN, percentile: NaN };
+        }
+        const strengthRatio = pull / expectedPull;
+        const ageGroup = getStrengthAgeGroup(age);
+        const groupKey = `${ageGroup}_${genderKey === 'female' ? 'f' : 'm'}`;
+        let groupStats = STRENGTH_MODEL.ageGroupAdjustments[groupKey];
+        let zScore = 0;
+        if (groupStats && groupStats.stdDev > 0) {
+            zScore = (strengthRatio - groupStats.mean) / groupStats.stdDev;
+        } else if (STRENGTH_MODEL.overall.stdDev > 0) {
+            groupStats = STRENGTH_MODEL.overall;
+            zScore = (strengthRatio - groupStats.mean) / groupStats.stdDev;
+        } else {
+            return { score: NaN, percentile: NaN };
+        }
+        const percentile = 50 * (1 + Math.tanh(zScore / Math.sqrt(2 * Math.PI)));
+        const clampedPercentile = Math.max(0, Math.min(100, percentile));
+        let finalScore = 50 + (zScore * 15);
+        finalScore = Math.max(0, Math.min(100, finalScore));
+        return { score: finalScore, percentile: clampedPercentile };
+    } catch (error) {
+        return { score: NaN, percentile: NaN };
+    }
+}
+
+function calculateAgeFromPercentile(percentile, realAge) {
+    // FIKS: Returner robust objekt selv om data mangler
+    if (!isFinite(percentile) || !isFinite(realAge) || realAge <= 0) {
+        const age = realAge > 0 ? realAge + 5 : 40; // Straffe-alder
+        return { age: age, change: 5, text: "Data mangler" };
+    }
+    const p = Math.max(0, Math.min(100, percentile));
+    const minAge = 21;
+    const avgAge = realAge;
+    const maxAge = realAge + 5;
+    let finalAge;
+    if (p === 50) {
+        finalAge = avgAge;
+    } else if (p > 50) {
+        finalAge = avgAge - ((p - 50) / 50) * (avgAge - minAge);
+    } else {
+        finalAge = maxAge - (p / 50) * (maxAge - avgAge);
+    }
+    const change = finalAge - realAge;
+    const text = `${Math.abs(change).toFixed(0)} år ${change > 0 ? 'eldre' : 'yngre'} enn forventet`;
+    return { age: finalAge, change: change, text: text };
+}
+
+/**
+ * FIKS: calculateReportData håndterer nå manglende data.
+ * Den genererer en komplett rapportstruktur som display-appen forventer.
+ */
+const calculateReportData = (formData) => {
+    const realAge = parseFloat(formData.realAge) || 0;
+    const sex = formData.kjonn || "Mann"; // Default til Mann hvis ikke satt
+
+    // FIKS: Sett en "straffe-alder" hvis data mangler
+    const missingDataAge = realAge > 0 ? realAge + 5 : 40; // Bruk 40 hvis realAge=0
+    const missingDataText = "Data mangler";
+
+    // 1. Balanse (Snitt av Høyre og Venstre)
+    const balCopR = parseFloat(formData['bal_r.cop']) || 0;
+    const balCopL = parseFloat(formData['bal_l.cop']) || 0;
+    const avgBalCop = (balCopR > 0 && balCopL > 0) ? (balCopR + balCopL) / 2 : (balCopR || balCopL); // Bruk snitt, eller en av dem
+    
+    let balResult = calculateBalanceAge(realAge, sex, avgBalCop);
+    if (isNaN(balResult.age) || avgBalCop === 0) {
+        balResult = { age: missingDataAge, change: 5, text: missingDataText };
+    }
+
+    // 2. Funksjonell (Hopp)
+    const jumpHeight = parseFloat(formData.jump) || 0;
+    const jumpPercentile = calculateJumpPercentile(realAge, sex, jumpHeight);
+    let funcResult = calculateAgeFromPercentile(jumpPercentile, realAge);
+    if (isNaN(funcResult.age)) {
+        funcResult = { age: missingDataAge, change: 5, text: missingDataText };
+    }
+
+    // 3. Styrke (Pull)
+    const weight = parseFloat(formData.pullWeight) || 0;
+    const pullForce = parseFloat(formData.pullForce) || 0;
+    const strengthPercentile = calculateStrengthScoreAndPercentile(sex, realAge, weight, pullForce).percentile;
+    let strengthResult = calculateAgeFromPercentile(strengthPercentile, realAge);
+    if (isNaN(strengthResult.age)) {
+        strengthResult = { age: missingDataAge, change: 5, text: missingDataText };
+    }
+    
+    // 4. Samlet alder
+    const validAges = [balResult.age, funcResult.age, strengthResult.age].filter(isFinite);
+    const fitnessAge = validAges.length > 0 ? validAges.reduce((a, b) => a + b, 0) / validAges.length : missingDataAge;
+    const ageDiff = (fitnessAge - realAge).toFixed(0);
+    const ageDiffNum = parseFloat(ageDiff);
+
+    // 5. Lag det endelige rapportobjektet
+    return {
+        "realAge": realAge,
+        "fitnessAge": parseFloat(fitnessAge.toFixed(1)),
+        "finalMessage": (validAges.length === 3 && realAge > 0) ? `Du er ${Math.abs(ageDiffNum)} år ${ageDiffNum > 0 ? 'eldre' : 'yngre'}!` : "Resultat ufullstendig",
+
+        "balanceAge": parseFloat(balResult.age.toFixed(1)),
+        "balanceChange": parseFloat(balResult.change.toFixed(1)),
+        "reportText1": balResult.text,
+
+        "functionalAge": parseFloat(funcResult.age.toFixed(1)),
+        "functionalChange": parseFloat(funcResult.change.toFixed(1)),
+        "reportText2": funcResult.text,
+
+        "strengthAge": parseFloat(strengthResult.age.toFixed(1)),
+        "strengthChange": parseFloat(strengthResult.change.toFixed(1)),
+        "reportText3": strengthResult.text
+    };
+};
+
+
+// ---------- Hoved App-komponenter ----------
+
+function TopBar({ onShowNotification, onShowOverview }) {
+  return (
+    <div className="w-full sticky top-0 z-20 bg-[#0a0c0e]">
+      <div className="max-w-sm mx-auto px-4 py-3 flex items-center justify-between">
+        <img src="https://storage.googleapis.com/files_webpage/narrow.png" alt="Alphatek" className="h-8 w-auto" />
+        {/* FIKS: Knappen er nå "Sign in" */}
+        <button onClick={() => onShowNotification("Sign in flow not implemented.")} className="px-3 py-1.5 rounded-full bg-white/5 text-white border border-white/15 text-sm inline-flex items-center gap-2 font-light">
+           <IconUser /> Sign in
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResultsDashboard({ results }) {
+    if (!results || results.length === 0) return null;
+    const ChangeIndicator = ({ change }) => {
+        if (change === undefined || change === null) return null;
+        const isPositive = change >= 0;
+        const sign = isPositive ? '+' : '';
+        const color = isPositive ? 'text-green-400' : 'text-red-400';
+        return <div className={`font-medium ${color}`}>{sign}{change}</div>;
+    };
+    const renderMetric = (result) => {
+        if (result.type === 'vitalAge') {
+            return (
+                <div className="flex items-baseline gap-2 text-right">
+                   <div className="text-white text-3xl font-medium">{result.value} <span className="text-xl font-light">years</span></div>
+                   <ChangeIndicator change={result.change} />
+                </div>
+            );
+        }
+        return (
+            <div className="flex flex-col items-end">
+               <div className="text-white text-3xl font-medium">{result.value}<span className="text-xl font-light">%</span></div>
+               <div className="text-white/60 text-xs font-light">Recovery</div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="max-w-sm mx-auto pt-4 animate-fade-in">
+            <h2 className="text-white/90 text-lg font-medium mb-2 px-4">My Results</h2>
+            <div className="flex overflow-x-auto gap-3 pb-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', paddingLeft: '1rem' }}>
+                {results.map((result, index) => (
+                    <div key={index} className="flex-shrink-0 w-[calc(100%-2rem)] h-28 rounded-2xl p-4 bg-gradient-to-br from-emerald-900/70 to-black/50 flex items-center justify-between">
+                        <div>
+                            <div className="text-white font-medium">{result.testName}</div>
+                            <div className="text-white/60 text-xs font-light">{result.date}</div>
+                        </div>
+                        {renderMetric(result)}
+                    </div>
+                ))}
+                <div className="flex-shrink-0 w-1"></div>
+            </div>
+        </div>
+    );
+}
+
+// FIKS: Lagt til manglende InfoBanner-komponent
+function InfoBanner({ onClose }) {
+  return (
+    <div className="max-w-sm mx-auto px-4 mt-3">
+      <div className="rounded-2xl bg-[#1a1c1f] border border-white/10 text-white/85 px-3 py-3 flex items-center justify-between">
+        <span className="inline-flex items-center gap-2 text-white/80">
+          <IconExclamationCircle />
+          <span><strong className="text-white font-light">This remote</strong> is in control of the TV until someone else scans.</span>
+        </span>
+        <button onClick={onClose} className="text-white/60 text-lg leading-none">×</button>
+      </div>
+    </div>
+  );
+}
+
+function FilterButtons({ filter, setFilter, filters }) {
+    return (
+        <div className="max-w-sm mx-auto px-4 pt-2 pb-1 overflow-x-auto">
+            <div className="flex items-center gap-2">{filters.map(f => (<button key={f} onClick={() => setFilter(f)} className={cx("px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap border", filter === f ? "bg-emerald-600 text-white border-transparent" : "bg-transparent border-white/30 text-white/80 hover:bg-white/10")}>{f}</button>))}</div>
+        </div>
+    );
+}
+
+function ProtocolCard({ label, duration, onStart, bgImage, targetGroup }) {
+    return (
+      <div className="max-w-sm mx-auto px-4 mt-4">
+        <div
+          className="rounded-2xl p-3 text-white relative bg-cover bg-center overflow-hidden min-h-[160px] flex flex-col justify-end"
+          style={{ backgroundImage: `url(${bgImage})` }}
+        >
+          <div className="absolute inset-0 bg-black/50 z-0"></div>
+          <div className="relative z-10 w-full bg-black/40 backdrop-blur-sm rounded-xl p-2 flex items-center justify-between">
+              <div>
+                  <div className="font-light text-lg">{label}</div>
+                  <div className="text-white/70 text-xs flex items-center gap-3 mt-0.5">
+                      <span className="flex items-center gap-1"><IconHourglass />{duration}</span>
+                      <span className="flex items-center gap-1"><IconUsers />for {targetGroup}</span>
+                  </div>
+              </div>
+              <button onClick={onStart} className="px-5 py-2 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 font-medium text-sm flex items-center justify-center gap-1.5 flex-shrink-0">
+                <IconPlay size={14} /> Start
+              </button>
+          </div>
+        </div>
+      </div>
+    );
+}
+
+function ExercisesList({ onShowNotification }) {
+  const list = [
+      { title: "Pull", desc: "Pull max for 3 seconds.", cmd: "showPull" },
+      { title: "Jump", desc: "Jump straight up, hands on hips.", cmd: "showJump" },
+      { title: "Balance (L)", desc: "Hold balance for 10 seconds.", cmd: "showBalanceLeft" },
+      { title: "Balance (R)", desc: "Hold balance for 10 seconds.", cmd: "showBalanceRight" },
+      { title: "Monitor", desc: "Live view on the big screen.", cmd: "showIframeHome" },
+  ];
+  return (<div className="max-w-sm mx-auto px-4 mt-4 animate-fade-in">{list.map((g) => (
+      <button key={g.title} onClick={() => sendFirebaseCommand(g.cmd)} className="w-full flex items-center justify-between rounded-xl bg-[#1a1c1f] border border-white/10 px-4 py-3 mb-3 hover:border-emerald-400/60 hover:bg-emerald-900/10">
+        <div className="flex items-center gap-3">
+          <div className="text-left">
+            <div className="text-white font-light text-sm">{g.title}</div>
+            <div className="text-white/60 text-xs">{g.desc}</div>
+          </div>
+        </div>
+        <IconPlay size={16} className="text-emerald-400" />
+      </button>
+  ))}</div>);
+}
+
+const Footer = () => ( <div className="max-w-sm mx-auto text-center text-white/50 text-xs py-6 font-light"> AlphaPWR — v2.0 by <span className="text-white/70">Alphatek</span> </div> );
+
+function Notification({ message }) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        if (message) {
+            setVisible(true);
+            const timer = setTimeout(() => setVisible(false), 2800);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
+    return (
+        <div className={cx( "fixed top-5 left-1/2 -translate-x-1/2 z-[100] bg-emerald-600 text-white px-5 py-2.5 rounded-lg shadow-2xl transition-all duration-300 font-medium", visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10" )}>
+            {message}
+        </div>
+    );
+}
+
+function BottomNavBar({ activeScreen, setActiveScreen }) {
+    const navItems = [
+        { id: 'screenings', label: 'Screenings', icon: IconFileText },
+        { id: 'modules', label: 'Modules', icon: IconGrid },
+        { id: 'results', label: 'Results', icon: IconBarChart },
+    ];
+    return (
+        <div className="absolute bottom-0 left-0 right-0 p-3 z-30">
+            <div className="bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-around p-2 ring-1 ring-white/20">
+                {navItems.map(item => {
+                    const Icon = item.icon;
+                    const isActive = activeScreen === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => setActiveScreen(item.id)}
+                            className={cx(
+                                "flex flex-col items-center justify-center gap-1 w-24 h-14 rounded-xl transition-colors duration-200",
+                                isActive ? 'bg-emerald-600/80 text-white' : 'text-white/70 hover:bg-white/10'
+                            )}
+                        >
+                            <Icon className="w-6 h-6" />
+                            <span className="text-xs font-medium">{item.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// ---------- VITALAGE TESTFLYTLOGIKK ----------
+
+// (Rekkefølge i hht. spesifikasjon og forespørsel)
+const TEST_FLOW_STEPS = [
+  { key: "bal_r", label: "Balance – Right", cmd_inst: "showBalanceRight", cmd_start: "showCounterBalRight" },
+  { key: "bal_l", label: "Balance – Left", cmd_inst: "showBalanceLeft", cmd_start: "showCounter1" },
+  { key: "jump", label: "Jump", cmd_inst: "showJump", cmd_start: "showCounterJump" },
+  { key: "pull", label: "Pull", cmd_inst: "showPull", cmd_start: "showCounterPull" },
+  { key: "realAge", label: "Summary", cmd_inst: null, cmd_start: null }, // Siste steg for Real Age
+];
+
+// Definerer inputfeltene for hvert steg
+const STEP_INPUTS = {
+  bal_r: [
+    { key: "bal_r.diff", label: "CoP Diff (cm)", type: "number" },
+    { key: "bal_r.cop", label: "CoP Areal (cm²)", type: "number" },
+  ],
+  bal_l: [
+    { key: "bal_l.diff", label: "CoP Diff (cm)", type: "number" },
+    { key: "bal_l.cop", label: "CoP Areal (cm²)", type: "number" },
+  ],
+  jump: [
+    { key: "jump", label: "Hopphøyde (cm)", type: "number" },
+  ],
+  pull: [
+    { key: "pullWeight", label: "Kroppsvekt (kg)", type: "number" },
+    { key: "pullForce", label: "Trekkraft (kg)", type: "number" },
+  ],
+  realAge: [
+    { key: "realAge", label: "Ekte Alder", type: "number", required: true },
+    // FIKS: Korrigert syntaxfeil her
+    { key: "kjonn", type: "select", options: ["Mann", "Kvinne"], required: true },
+  ],
+};
+
+// Komponent for toppen av flyten
+function FlowTopBar({ title, onBack }) {
+    return (
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 h-[60px]">
+            <div className="w-10">
+                {onBack && (
+                    <button onClick={onBack} className="text-white/70 hover:text-white bg-black/30 p-2 rounded-full">
+                        <IconArrowLeft width="20" height="20" />
+                    </button>
+                )}
+            </div>
+             <h1 className="text-xl font-medium text-center text-white/90 absolute left-1/2 -translate-x-1/2">{title}</h1>
+            <div className="w-10"></div>
+        </div>
+    );
+}
+
+// Komponent for inputfeltene
+function TestInputForm({ stepKey, formData, setFormData }) {
+    const inputs = STEP_INPUTS[stepKey] || [];
+    
+    const handleChange = (key, value) => {
+        setFormData(prev => ({ ...prev, [key]: value }));
+    };
+
+    return (
+        <div className="w-full max-w-sm mx-auto px-4 space-y-4">
+            {inputs.map(input => (
+                <div key={input.key}>
+                    <label className="block text-sm font-light text-white/70 mb-1.5" htmlFor={input.key}>
+                        {input.label} {input.required && <span className="text-red-400">*</span>}
+                    </label>
+                    {input.type === 'select' ? (
+                        <select
+                            id={input.key}
+                            value={formData[input.key] || ''}
+                            onChange={(e) => handleChange(input.key, e.target.value)}
+                            className="w-full p-3 bg-[#1a1c1f] border border-white/20 rounded-xl text-lg font-medium placeholder-white/40"
+                        >
+                            <option value="" disabled>Velg...</option>
+                            {input.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                    ) : (
+                        <input
+                            type={input.type}
+                            id={input.key}
+                            step="0.1"
+                            value={formData[input.key] || ''}
+                            onChange={(e) => handleChange(input.key, e.target.value)}
+                            placeholder={input.type === 'number' ? '0.0' : ''}
+                            className="w-full p-3 bg-[#1a1c1f] border border-white/20 rounded-xl text-lg font-medium placeholder-white/40"
+                        />
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// NY: Panel for å starte testen
+function TestStartPanel({ stepKey, onStartTest, testStatus, onRestartTest }) {
+    const step = TEST_FLOW_STEPS.find(s => s.key === stepKey);
+    if (!step || !step.cmd_start) return null; // Vises ikke for "Real Age"
+
+    const isTestRunning = testStatus === 'running';
+
+    return (
+        <div className="w-full max-w-sm mx-auto px-4 mt-6">
+            <div className="bg-[#1a1c1f] border border-white/10 rounded-xl p-4 flex items-center justify-between">
+                <div className="flex flex-col">
+                    <span className="text-lg font-medium text-white">
+                        {isTestRunning ? "Test Kjører..." : "Klar til Test"}
+                    </span>
+                    <span className="text-sm font-light text-white/60">
+                        {isTestRunning ? "Se på TV-skjermen" : `Start "${step.label}" på TV`}
+                    </span>
+                </div>
+                {!isTestRunning ? (
+                    <button 
+                        onClick={onStartTest}
+                        className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-medium text-sm flex items-center justify-center gap-2 flex-shrink-0"
+                    >
+                        <IconPlay size={14} /> Start Test
+                    </button>
+                ) : (
+                    <button 
+                        onClick={onRestartTest} // Bruker onRestartTest
+                        className="p-3 rounded-lg bg-white/10 hover:bg-white/20 font-medium text-sm flex items-center justify-center gap-2 flex-shrink-0"
+                    >
+                        <IconRestart size={16} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+
+// Komponent for navigasjonslisten nederst i flyten
+function TestFlowFooter({ steps, currentKey, onNavigate, onPrev, onNext, onRestartTest, isLastStep, isTestRunning }) {
+    const currentIndex = steps.findIndex(s => s.key === currentKey);
+
+    return (
+        <div className="w-full sticky bottom-0 z-20 bg-[#0a0c0e] border-t border-white/10">
+            {/* Test Oversikt */}
+            <div className="w-full max-w-sm mx-auto px-4 pt-3">
+                <label className="block text-xs font-light text-white/50 mb-1.5 uppercase tracking-wider">Test Oversikt</label>
+                <div className="flex items-center gap-2">
+                    {steps.map((step, index) => (
+                        <button
+                            key={step.key}
+                            onClick={() => onNavigate(index)}
+                            className={cx(
+                                "h-2 flex-1 rounded-full",
+                                index === currentIndex ? "bg-emerald-500" : "bg-white/20 hover:bg-white/40"
+                            )}
+                        ></button>
+                    ))}
+                </div>
+            </div>
+            
+            {/* Hovedhandlinger */}
+            <div className="w-full max-w-sm mx-auto p-4 flex items-center justify-between gap-3">
+                <button
+                    onClick={onPrev}
+                    disabled={currentIndex === 0}
+                    className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 font-medium text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                    Forrige
+                </button>
+                
+                {/* Replay-knapp (kun synlig hvis testen kjører OG det ikke er siste steg) */}
+                {isTestRunning && !isLastStep && (
+                    <button
+                        onClick={onRestartTest}
+                        className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white/80"
+                        title="Kjør testen på nytt"
+                    >
+                        <IconRestart size={16} />
+                    </button>
+                )}
+
+                <button
+                    onClick={onNext}
+                    className="flex-grow py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm"
+                >
+                    {isLastStep ? "Send Sluttrapport" : "Lagre & Neste Steg"}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// NY: Oversiktsside FØR selve flyten
+function TestFlowOverview({ onStartFlow, onExit }) {
+    return (
+        <div className="flex flex-col h-full animate-fade-in">
+            <FlowTopBar title="VitalAge Scan" onBack={onExit} />
+            <div className="flex-grow flex flex-col p-4 overflow-y-auto">
+                <div 
+                    className="flex-shrink-0 h-40 rounded-2xl bg-cover bg-center relative flex items-end p-4 mb-6" 
+                    style={{ backgroundImage: `url(${BG_IMAGES[0]})`}}
+                >
+                    <div className="absolute inset-0 bg-black/40 z-0"></div>
+                    <div className="relative z-10">
+                        <h1 className="text-2xl font-medium text-white">VitalAge Scan</h1>
+                        <p className="text-white/80 text-sm">Gjør klar for testsekvensen.</p>
+                    </div>
+                </div>
+
+                <h2 className="text-lg font-medium text-white/90 mb-3">Testrekkefølge</h2>
+                <div className="space-y-3">
+                    {TEST_FLOW_STEPS.map((step, index) => {
+                        if (step.key === 'realAge') return null; // Ikke vis "Summary" her
+                        return (
+                            <div key={step.key} className="w-full flex items-center justify-between rounded-xl bg-[#1a1c1f] border border-white/10 px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-900/50 text-emerald-400 flex items-center justify-center text-sm font-bold">
+                                        {index + 1}
+                                    </span>
+                                    <div className="text-left">
+                                        <div className="text-white font-light text-base">{step.label}</div>
+                                    </div>
+                                </div>
+                                <IconChevronRight className="text-white/30" />
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+            
+            <div className="flex-shrink-0 p-4 border-t border-white/10">
+                <button 
+                    onClick={onStartFlow} 
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-base font-medium"
+                >
+                    Start Flow
+                </button>
+            </div>
+        </div>
+    );
+}
+
+
+// Hovedkomponent for selve testflyten (registrering)
+function VitalAgeTestFlow({ onExit }) {
+    // FIKS: currentStepIndex 0 = Oversikt, 1 = Første test (bal_r)
+    const [currentStepIndex, setCurrentStepIndex] = useState(0); 
+    const [testStatus, setTestStatus] = useState('pending'); // 'pending', 'running'
+    const [formData, setFormData] = useState({
+        kjonn: "Mann" // Default
+    });
+
+    const isOverview = currentStepIndex === 0;
+    
+    // Finner det *faktiske* teststeget fra arrayet (indeks 0 er bal_r)
+    // currentStepIndex 1 tilsvarer TEST_FLOW_STEPS[0]
+    const activeTestStep = TEST_FLOW_STEPS[currentStepIndex - 1] || null;
+    // Siste steg er når indeksen er lik lengden (f.eks. 5 steg, indeks 5)
+    const isLastStep = currentStepIndex === TEST_FLOW_STEPS.length; 
+
+    // Navigasjons- og Handlingsfunksjoner
+    const navigateToStep = (index) => {
+        if (index === 0) { // Går til oversikt
+             setCurrentStepIndex(0);
+             sendFirebaseCommand("showOverview"); // Send oversikt til TV
+        } else if (index > 0 && index <= TEST_FLOW_STEPS.length) {
+            setCurrentStepIndex(index);
+            setTestStatus('pending'); // Nullstill teststatus
+            
+            const step = TEST_FLOW_STEPS[index - 1]; // Få riktig steg
+            if (step && step.cmd_inst) {
+                sendFirebaseCommand(step.cmd_inst);
+            } else {
+                // Siste steg (Real Age), ikke send videokommando.
+                // TV-en skal forbli på siste iframe (Pull).
+                console.log("Navigert til Real Age-steget. TV-en forblir på Pull-iframe.");
+            }
+        }
+    };
+
+    // Starter flyten fra oversikten
+    const handleStartFlow = () => {
+        navigateToStep(1); // Gå til første test (indeks 1)
+    };
+    
+    const handleNext = () => {
+        if (isLastStep) {
+            // --- SEND SLUTTRAPPORT ---
+            const reportData = calculateReportData(formData);
+            console.log("Sender rapportdata:", reportData);
+            
+            sendFirebaseReport(reportData)
+                .then(() => {
+                    console.log("Rapportdata lagret. Sender 'showReport'-kommando.");
+                    // FIKS: Legg inn 500ms forsinkelse
+                    setTimeout(() => {
+                        sendFirebaseCommand("showReport");
+                        onExit(); // Gå ut av flyten
+                    }, 500); 
+                })
+                .catch(err => console.error("Feil ved lagring av rapport:", err));
+        } else {
+            navigateToStep(currentStepIndex + 1);
+        }
+    };
+
+    const handlePrev = () => {
+        if (currentStepIndex > 0) {
+            navigateToStep(currentStepIndex - 1);
+        }
+    };
+
+    const handleStartTest = () => {
+        if (!activeTestStep || !activeTestStep.cmd_start) return;
+        setTestStatus('running');
+        sendFirebaseCommand(activeTestStep.cmd_start);
+    };
+
+    const handleRestartTest = () => {
+        // Samme som start, bare for å kjøre på nytt
+        handleStartTest(); 
+    };
+    
+    const handleExit = () => {
+        sendFirebaseCommand("showIframeHome"); // Gå tilbake til start
+        onExit();
+    };
+
+    // Viser enten oversikten eller selve test-steget
+    if (isOverview) {
+        return (
+            <TestFlowOverview onStartFlow={handleStartFlow} onExit={handleExit} />
+        );
+    }
+    
+    // Selve test-steget
+    const currentStepKey = activeTestStep?.key || 'realAge';
+    const title = activeTestStep?.label || 'Summary';
+
+    return (
+        <div className="h-full max-h-[844px] overflow-hidden bg-[#0a0c0e] text-white font-sans font-light flex flex-col">
+            <FlowTopBar title={title} onBack={handleExit} />
+            
+            {/* Hovedinnhold (Input + Start Test-panel) */}
+            <div className="flex-grow overflow-y-auto pt-6 pb-32">
+                <TestInputForm
+                    stepKey={currentStepKey}
+                    formData={formData}
+                    setFormData={setFormData}
+                />
+                <TestStartPanel 
+                    stepKey={currentStepKey}
+                    testStatus={testStatus}
+                    onStartTest={handleStartTest}
+                    onRestartTest={handleRestartTest} // Sendt ned hit
+                />
+            </div>
+
+            {/* Fast bunnmeny */}
+            <TestFlowFooter
+                steps={TEST_FLOW_STEPS}
+                currentKey={currentStepKey}
+                onNavigate={(index) => navigateToStep(index + 1)} // +1 fordi 0 er oversikt
+                onPrev={handlePrev}
+                onNext={handleNext}
+                onRestartTest={handleRestartTest} // Sendt ned hit
+                isLastStep={isLastStep}
+                isTestRunning={testStatus === 'running'}
+            />
+        </div>
+    );
+}
+
+
+// ---------- Main App Wrapper (fjernet export default) ----------
+function App() {
+  const [bannerOpen, setBannerOpen] = React.useState(true);
+  const [activeScreen, setActiveScreen] = React.useState("screenings");
+  const [activeFlow, setActiveFlow] = React.useState(null); // null, 'vitalAge'
+  const [notification, setNotification] = React.useState(null);
+  const notificationId = React.useRef(0);
+  
+  const protocolFilters = ["All", ...new Set(ALL_PROTOCOLS.map(p => p.targetGroup))];
+  const [activeFilter, setActiveFilter] = React.useState(protocolFilters[0]);
+
+  // FIKS: Nullstill TV-en til 'showIframeHome' når kontrollpanelet lastes inn
+  useEffect(() => {
+    sendFirebaseCommand("showIframeHome");
+  }, []);
+
+  const showNotification = (message) => {
+      notificationId.current += 1;
+      setNotification(`${message}##${notificationId.current}`);
+  };
+
+  const handleAction = (protocol) => {
+      if (protocol.action === "start_vitalage") {
+          // FIKS: Send 'showOverview' når flyten startes
+          sendFirebaseCommand("showOverview");
+          setActiveFlow('vitalAge');
+      } else {
+          showNotification(`Starting ${protocol.label}`);
+      }
+  };
+  
+  const handleShowOverview = () => {
+      sendFirebaseCommand("showOverview");
+  };
+
+  // Viser testflyten over alt annet
+  if (activeFlow === 'vitalAge') {
+      return (
+          <div className="relative h-[90vh] max-h-[844px] overflow-y-auto mx-auto max-w-sm text-white rounded-2xl border border-white/10 shadow-xl font-sans font-light bg-[#0a0c0e]">
+              <VitalAgeTestFlow onExit={() => setActiveFlow(null)} />
+          </div>
+      );
+  }
+
+  // Hoved-dashbordet
+  const renderProtocolCards = () => {
+      const filteredProtocols = activeFilter === 'All' 
+        ? ALL_PROTOCOLS 
+        : ALL_PROTOCOLS.filter(p => p.targetGroup === activeFilter);
+      return (<div className="pb-4 animate-fade-in">{filteredProtocols.map((p) => <ProtocolCard key={p.label} {...p} onStart={() => handleAction(p)} bgImage={BG_IMAGES[ALL_PROTOCOLS.indexOf(p)]} />)}</div>);
+  };
+
+  return (
+    <div className="relative flex flex-col h-[90vh] max-h-[844px] overflow-hidden mx-auto max-w-sm text-white rounded-2xl border border-white/10 shadow-xl font-sans font-light bg-[#0a0c0e]">
+      <Notification message={notification?.split('##')[0]} />
+      {/* FIKS: Sendt ned riktig funksjon */}
+      <TopBar onShowNotification={showNotification} onShowOverview={handleShowOverview} />
+      
+      <div className="flex-grow overflow-y-auto pb-24"> 
+        {/* Innholdet rendres nå direkte med CSS-klasser for å bytte synlighet */}
+        
+        {/* Screenings Side */}
+        <div className={cx(activeScreen === 'screenings' ? 'block' : 'hidden')}>
+          <FilterButtons filter={activeFilter} setFilter={setActiveFilter} filters={protocolFilters} />
+          {renderProtocolCards()}
+        </div>
+
+        {/* Modules Side */}
+        <div className={cx(activeScreen === 'modules' ? 'block' : 'hidden')}>
+          <ExercisesList onShowNotification={showNotification} />
+        </div>
+
+        {/* Results Side */}
+        <div className={cx(activeScreen === 'results' ? 'block' : 'hidden')}>
+          <ResultsDashboard results={MOCK_RESULTS} />
+        </div>
+        
+        {bannerOpen && <InfoBanner onClose={() => setBannerOpen(false)} />}
+        <Footer />
+      </div>
+      
+      <BottomNavBar activeScreen={activeScreen} setActiveScreen={setActiveScreen} />
+    </div>
+  );
+}
+
+// ---------- 7. START REACT-APPEN ----------
+// Finner "root"-diven og ber ReactDOM om å rendre "App"-komponenten inni den.
+const container = document.getElementById('root');
+const root = ReactDOM.createRoot(container);
+root.render(<App />);
+
+    </script>
+</body>
+</html>
